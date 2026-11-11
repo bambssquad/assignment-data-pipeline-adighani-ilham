@@ -1,0 +1,41 @@
+name: build-artifacts
+
+# Satu kali jalan (saat file ini di-push): menyalin dataset mentah dari materi Sesi 3,
+# menjalankan src/pipeline.py untuk menghasilkan processed dataset, dan membuat diagram.
+on:
+  push:
+    paths:
+      - ".github/workflows/build-artifacts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependency
+        run: pip install pandas==3.0.5 numpy matplotlib
+      - name: Ambil dataset mentah (Dataset_Sesi_3.zip)
+        run: |
+          curl -sSL -o ds.zip "https://drive.usercontent.google.com/download?id=12rIPbz5eiQHGi-zW3ltB2Mvcq_UhU_ak&export=download&confirm=t"
+          mkdir -p ds_extract data/raw
+          unzip -o -q ds.zip -d ds_extract
+          cp ds_extract/Dataset_Sesi_3/automobileEDA_dirty_training.csv data/raw/
+      - name: Jalankan pipeline
+        run: python src/pipeline.py
+      - name: Buat diagram
+        run: python documentation/make_diagram.py
+      - name: Commit hasil
+        run: |
+          rm -rf ds.zip ds_extract
+          git config user.name "bambssquad"
+          git config user.email "137799776+bambssquad@users.noreply.github.com"
+          git add data documentation
+          git commit -m "Add raw dataset, processed dataset, and data flow diagram" || echo "nothing to commit"
+          git push
